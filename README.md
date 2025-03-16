@@ -4,7 +4,7 @@ Um script para criar grafos de Genealogia Acadêmica com dados da [Plataforma Ac
 ## Plataforma Acácia
 De acordo com a página inicial da Plataforma Acácia, o site surgiu com o objetivo de _"documentar as relações formais de orientação no contexto dos programas de pós graduação brasileiros"_ por meio dos dados do **Currículo Lattes**. 
 
-A partir do link do perfil de um orientador na Plataforma Acácia, o script JararacaPy gera arquivos _csv_. Com esses arquivos e o software [Gephi](https://gephi.org/), é possível criar grafos de Genealogia Acadêmica.
+A partir do link do perfil de um orientador na Plataforma Acácia, o JararacaScript gera arquivos _csv_. Com esses arquivos e o software [Gephi](https://gephi.org/), é possível criar grafos de Genealogia Acadêmica.
 
 
 ## Pré-requisitos
