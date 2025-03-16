@@ -1,4 +1,4 @@
-# JararacaPy
+# JararacaScript
 Um script para criar grafos de Genealogia Acadêmica com dados da [Plataforma Acácia](https://plataforma-acacia.org/)
 
 ## Plataforma Acácia
@@ -73,7 +73,12 @@ Para gerar a visualização em forma de grafo de Genealogia Acadêmica, é utilz
  	
 
 ## Nome
+De acordo com a página Sobre da Plataforma Acácia:
+> O termo Acácia é uma inspiração da árvore Acácia, uma espécie nativa do sudeste Australiano. O formato da copa desta espécie assemelha-se com os grafos de genealogia acadêmica identificados no contexto brasileiro, ou seja, são compactos em termos de altura, indicando que no Brasil a Ciência é jovem (possui poucas gerações de doutores e mestres), mas largos, em termos de comprimento.
+Assim como uma Jararaca - a qual pode coexistir no mesmo habitat da Acácia no Brasil -, o script explora os galhos da árvore Ciência brasileira. (Além do programa ser escrito em Python).
 
-## Referências
+### Mais informações
+ROSSI, L.; DAMACENO, R.; MENA-CHALCO, J. [Genealogia acadêmica: Um novo olhar sobre impacto acadêmico de pesquisadores](https://www.cgee.org.br/documents/10195/3952601/184920.pdf). Revista Parcerias Estratégicas, v. 23, p. 197–212, 1 dez. 2018.
 
+Contato: guilhermexaviersouza.0@gmail.com
 
