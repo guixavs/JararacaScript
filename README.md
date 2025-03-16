@@ -23,7 +23,7 @@ Para gerar a visualização em forma de grafo de Genealogia Acadêmica, é utilz
 * Lineage
 
 ## Instruções
-1. Execute o arquivo JararacaPy fornecendo o link do orientador desejado.
+1. Execute o arquivo _JararacaScript.py_ fornecendo o link do orientador desejado.
 
 2. Aguarde a execução do script e confira se na pasta do projeto foram gerados 3 novos arquivos:
    * _NomeDoOrientador_edges.csv_
