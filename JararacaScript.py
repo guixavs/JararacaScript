@@ -171,6 +171,7 @@ def main():
         "\nEste programa irá baixar os dados de orientação de um professor por meio da Plataforma Acácia"
     )
     url = input("\nPor favor, insira a URL do professor que deseja baixar os dados: ")
+    """Exemplos de URL para teste"""
     # url = "https://plataforma-acacia.org/profile/tereza-maria-de-azevedo-pires-serio/"
     # url = "https://plataforma-acacia.org/profile/isaias-pessotti/"
     # url = "https://plataforma-acacia.org/profile/silvia-tatiana-maurer-lane/"
