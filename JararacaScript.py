@@ -91,7 +91,7 @@ def criar_tabela(url, arquivo="nodes.csv", id=0):
                 link
             ):  # Verifica se o orientado tem orientados
                 links.append([link, int(linha[0])])
-    print(plan)
+    print(f"Baixando dados de: {linha[1]}")
     plan.to_csv(arquivo, mode="a", header=False, index=False)
     define_edges(plan, id)  # Chama a função para definir as arestas
     """Ver a ordenação"""
@@ -166,17 +166,28 @@ def add_ano_ord(arquivo="nodes.csv"):
 
 
 def main():
-    url = input("Insira a URL do orientador: ")
+    print("\nBem-vindo ao JararacaScript!")
+    print(
+        "\nEste programa irá baixar os dados de orientação de um professor por meio da Plataforma Acácia"
+    )
+    url = input("\nPor favor, insira a URL do professor que deseja baixar os dados: ")
     # url = "https://plataforma-acacia.org/profile/tereza-maria-de-azevedo-pires-serio/"
     # url = "https://plataforma-acacia.org/profile/isaias-pessotti/"
     # url = "https://plataforma-acacia.org/profile/silvia-tatiana-maurer-lane/"
-    #url = "https://plataforma-acacia.org/profile/carolina-martuscelli-bori/"
+    # url = "https://plataforma-acacia.org/profile/carolina-martuscelli-bori/"
     # url = "https://plataforma-acacia.org/profile/maria-do-carmo-guedes/"
     nome = criar_arquivos(url)
+    print(f"\nBaixando dados de orientação de: {nome}\n")
     criar_tabela(url)
     limpa_arquivo()  # Limpa o arquivo para ficar apenas com os dados necessários
     add_ano_ord()
     nomear_arquivos(nome)
+    print("\nOs dados foram baixados com sucesso!")
+    print("\nOs arquivos gerados foram:")
+    print(f"{nome}_nodes.csv")
+    print(f"{nome}_edges.csv")
+    print(f"{nome}_links.txt")
+    print("\nObrigado por usar o JararacaScript!")
 
 
 main()
