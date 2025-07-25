@@ -4,10 +4,13 @@ from requests import get
 import pandas as pd
 import time
 
+headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+}
 
 def dados_orientador(url: str) -> list:
     """Função que retorna os dados do orientador"""
-    soup = bs(get(url).text, "html.parser")
+    soup = bs(get(url, headers=headers).text, "html.parser")
     tabela = soup.find("table", attrs={"id": "table-profile-ascendants"})
     valores: list = [0, soup.find("h2", attrs={"itemprop": "name"}).text]
     anos: str = ""
@@ -20,18 +23,9 @@ def dados_orientador(url: str) -> list:
         anos += linha[2]
     for i in limpa_ano(anos):
         valores.append(i)
-    divs = soup.findAll("div", attrs={"class": "has-extra-margin-bottom"})
-    infos = divs[2].findAll("li", attrs={"class": "is-size-5"})
-    lista = []
-    for info in infos[:-1]:
-        dado = info.text
-        lista.append(limpa_nome(dado))
-    for dado in lista:
-        valor = ""
-        for i in dado:
-            if i.isdigit():
-                valor += i
-        valores.append(int(valor))
+    infos = soup.findAll("td", attrs={"class": "has-text-right"})
+    for info in infos[0:7]:
+        valores.append(int(info.text))
     return valores
 
 
@@ -65,7 +59,7 @@ def nomear_arquivos(
 
 def criar_tabela(url: str, arquivo: str = "nodes.csv", id: int = 0):
     """Função que cria uma tabela com os dados dos orientados de um professor"""
-    soup = bs(get(url).text, "html.parser")
+    soup = bs(get(url, headers=headers).text, "html.parser")
     print(f"\nBaixando dados de {soup.find("h2", attrs={"itemprop": "name"}).text}")
     tabela = soup.find("table", attrs={"id": "table-profile-descendants"})
     plan = pd.DataFrame(
@@ -135,7 +129,7 @@ def limpa_nome(nome: str) -> str:
 
 def limpa_ano(str: str) -> tuple:
     """Função que limpa o ano dos orientados"""
-    if len(str) > 5:  # Tratamento para o caso de ter dois anos
+    if len(str) == 10:  # Tratamento para o caso de ter dois anos
         ano1 = int(str[1:5])
         ano2 = int(str[6:10])
         if ano1 <= ano2:
@@ -181,9 +175,9 @@ def main() -> None:
     print(
         "\nEste programa irá baixar os dados de orientação de um professor por meio da Plataforma Acácia"
     )
-    url = input("\nPor favor, insira a URL do professor que deseja baixar os dados: ")
+    # url = input("\nPor favor, insira a URL do professor que deseja baixar os dados: ")
     # Exemplos de URL para teste
-    # url = "https://plataforma-acacia.org/profile/tereza-maria-de-azevedo-pires-serio/"
+    url = "https://plataforma-acacia.org/profile/tereza-maria-de-azevedo-pires-serio/"
     # url = "https://plataforma-acacia.org/profile/isaias-pessotti/"
     # url = "https://plataforma-acacia.org/profile/silvia-tatiana-maurer-lane/"
     # url = "https://plataforma-acacia.org/profile/carolina-martuscelli-bori/"
