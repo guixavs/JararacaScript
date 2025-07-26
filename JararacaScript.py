@@ -14,16 +14,16 @@ def dados_orientador(url: str) -> list:
     tabela = soup.find("table", attrs={"id": "table-profile-ascendants"})
     valores: list = [0, soup.find("h2", attrs={"itemprop": "name"}).text]
     anos: str = ""
-    linhas = tabela.findAll("tr")
+    linhas = tabela.find_all("tr")
     for l in linhas[1:]:
-        dado = l.findAll("td")
+        dado = l.find_all("td")
         linha: list[str] = [tr.text for tr in dado]
         linha[1] = limpa_nome(linha[1])
         linha[2] = limpa_nome(linha[2])
         anos += linha[2]
     for i in limpa_ano(anos):
         valores.append(i)
-    infos = soup.findAll("td", attrs={"class": "has-text-right"})
+    infos = soup.find_all("td", attrs={"class": "has-text-right"})
     for info in infos[0:7]:
         valores.append(int(info.text))
     return valores
@@ -57,20 +57,39 @@ def nomear_arquivos(
     replace(links, f"{nome}_links.txt")
 
 
-def criar_tabela(url: str, arquivo: str = "nodes.csv", id: int = 0):
+def criar_tabela(url: str, arquivo: str = "nodes.csv", id: int = 0, max_tries: int = 5) -> None:
     """Função que cria uma tabela com os dados dos orientados de um professor"""
-    soup = bs(get(url, headers=headers).text, "html.parser")
-    print(f"\nBaixando dados de {soup.find("h2", attrs={"itemprop": "name"}).text}")
+    current_try = 1
+    timeout = 2
+
+    # Tenta acessar a página até o número máximo de tentativas
+    while current_try <= max_tries:
+        try:
+            soup = bs(get(url, headers=headers).text, "html.parser")
+            print(f"\nBaixando dados de {soup.find("h2", attrs={"itemprop": "name"}).text}")
+            break
+        except AttributeError:
+            # Define o tempo de espera exponencialmente
+            wait_time = timeout ** current_try
+
+            print(f"Tentativa {current_try} falhou. Tentando novamente em {wait_time} segundos...")
+            
+            # Força o script a esperar antes de tentar novamente
+            time.sleep(wait_time)
+
+            # Incrementa o número da tentativa
+            current_try += 1
+    
     tabela = soup.find("table", attrs={"id": "table-profile-descendants"})
     plan = pd.DataFrame(
         columns=["Id", "Nome", "Tipo", "Ano", "Ds", "IG", "Fc", "Ft", "G", "R", "Pr"]
     )
-    linhas = tabela.findAll("tr")
+    linhas = tabela.find_all("tr")
     links = []
     txt = []
     i = 1
     for l in linhas[1:]:
-        dado = l.findAll("td")
+        dado = l.find_all("td")
         linha = [tr.text for tr in dado]
         linha[1] = limpa_nome(linha[1])
         linha[2] = limpa_nome(linha[2])
