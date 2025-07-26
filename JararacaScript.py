@@ -14,16 +14,16 @@ def dados_orientador(url: str) -> list:
     tabela = soup.find("table", attrs={"id": "table-profile-ascendants"})
     valores: list = [0, soup.find("h2", attrs={"itemprop": "name"}).text]
     anos: str = ""
-    linhas = tabela.findAll("tr")
+    linhas = tabela.find_all("tr")
     for l in linhas[1:]:
-        dado = l.findAll("td")
+        dado = l.find_all("td")
         linha: list[str] = [tr.text for tr in dado]
         linha[1] = limpa_nome(linha[1])
         linha[2] = limpa_nome(linha[2])
         anos += linha[2]
     for i in limpa_ano(anos):
         valores.append(i)
-    infos = soup.findAll("td", attrs={"class": "has-text-right"})
+    infos = soup.find_all("td", attrs={"class": "has-text-right"})
     for info in infos[0:7]:
         valores.append(int(info.text))
     return valores
@@ -65,12 +65,12 @@ def criar_tabela(url: str, arquivo: str = "nodes.csv", id: int = 0):
     plan = pd.DataFrame(
         columns=["Id", "Nome", "Tipo", "Ano", "Ds", "IG", "Fc", "Ft", "G", "R", "Pr"]
     )
-    linhas = tabela.findAll("tr")
+    linhas = tabela.find_all("tr")
     links = []
     txt = []
     i = 1
     for l in linhas[1:]:
-        dado = l.findAll("td")
+        dado = l.find_all("td")
         linha = [tr.text for tr in dado]
         linha[1] = limpa_nome(linha[1])
         linha[2] = limpa_nome(linha[2])
