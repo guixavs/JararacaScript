@@ -57,10 +57,29 @@ def nomear_arquivos(
     replace(links, f"{nome}_links.txt")
 
 
-def criar_tabela(url: str, arquivo: str = "nodes.csv", id: int = 0):
+def criar_tabela(url: str, arquivo: str = "nodes.csv", id: int = 0, max_tries: int = 5) -> None:
     """Função que cria uma tabela com os dados dos orientados de um professor"""
-    soup = bs(get(url, headers=headers).text, "html.parser")
-    print(f"\nBaixando dados de {soup.find("h2", attrs={"itemprop": "name"}).text}")
+    current_try = 1
+    timeout = 2
+
+    # Tenta acessar a página até o número máximo de tentativas
+    while current_try <= max_tries:
+        try:
+            soup = bs(get(url, headers=headers).text, "html.parser")
+            print(f"\nBaixando dados de {soup.find("h2", attrs={"itemprop": "name"}).text}")
+            break
+        except AttributeError:
+            # Define o tempo de espera exponencialmente
+            wait_time = timeout ** current_try
+
+            print(f"Tentativa {current_try} falhou. Tentando novamente em {wait_time} segundos...")
+            
+            # Força o script a esperar antes de tentar novamente
+            time.sleep(wait_time)
+
+            # Incrementa o número da tentativa
+            current_try += 1
+    
     tabela = soup.find("table", attrs={"id": "table-profile-descendants"})
     plan = pd.DataFrame(
         columns=["Id", "Nome", "Tipo", "Ano", "Ds", "IG", "Fc", "Ft", "G", "R", "Pr"]
