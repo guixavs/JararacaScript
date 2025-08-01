@@ -8,6 +8,7 @@ headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
 }
 
+
 def dados_orientador(url: str) -> list:
     """Função que retorna os dados do orientador"""
     soup = bs(get(url, headers=headers).text, "html.parser")
@@ -26,13 +27,14 @@ def dados_orientador(url: str) -> list:
     infos = soup.find_all("td", attrs={"class": "has-text-right"})
     for info in infos[0:7]:
         valores.append(int(info.text))
+    valores.append(False)
     return valores
 
 
 def criar_arquivos(url: str) -> str:
     """Função que cria o arquivo csv com os cabeçalhos"""
     nodes = pd.DataFrame(
-        columns=["Id", "Nome", "Tipo", "Ano", "Ds", "IG", "Fc", "Ft", "G", "R", "Pr"]
+        columns=["Id", "Nome", "Tipo", "Ano", "Ds", "IG", "Fc", "Ft", "G", "R", "Pr", "Co"]
     )
     dados = dados_orientador(url)
     nome = dados[1]
@@ -57,7 +59,9 @@ def nomear_arquivos(
     replace(links, f"{nome}_links.txt")
 
 
-def criar_tabela(url: str, arquivo: str = "nodes.csv", id: int = 0, max_tries: int = 5) -> None:
+def criar_tabela(
+    url: str, arquivo: str = "nodes.csv", id: int = 0, max_tries: int = 5
+) -> None:
     """Função que cria uma tabela com os dados dos orientados de um professor"""
     current_try = 1
     timeout = 2
@@ -66,25 +70,29 @@ def criar_tabela(url: str, arquivo: str = "nodes.csv", id: int = 0, max_tries: i
     while current_try <= max_tries:
         try:
             soup = bs(get(url, headers=headers).text, "html.parser")
-            print(f"\nBaixando dados de {soup.find("h2", attrs={"itemprop": "name"}).text}")
+            print(
+                f"\nBaixando dados de {soup.find("h2", attrs={"itemprop": "name"}).text}"
+            )
             break
         except AttributeError:
             # Define o tempo de espera exponencialmente
-            wait_time = timeout ** current_try
+            wait_time = timeout**current_try
 
-            print(f"Tentativa {current_try} falhou. Tentando novamente em {wait_time} segundos...")
-            
+            print(
+                f"Tentativa {current_try} falhou. Tentando novamente em {wait_time} segundos..."
+            )
+
             # Força o script a esperar antes de tentar novamente
             time.sleep(wait_time)
 
             # Incrementa o número da tentativa
             current_try += 1
-    
+
     tabela = soup.find("table", attrs={"id": "table-profile-descendants"})
     plan = pd.DataFrame(
-        columns=["Id", "Nome", "Tipo", "Ano", "Ds", "IG", "Fc", "Ft", "G", "R", "Pr"]
+        columns=["Id", "Nome", "Tipo", "Ano", "Ds", "IG", "Fc", "Ft", "G", "R", "Pr", "Co"]
     )
-    linhas = tabela.find_all("tr")
+    linhas = tabela.find_all("tr")  
     links = []
     txt = []
     i = 1
@@ -93,12 +101,14 @@ def criar_tabela(url: str, arquivo: str = "nodes.csv", id: int = 0, max_tries: i
         linha = [tr.text for tr in dado]
         linha[1] = limpa_nome(linha[1])
         linha[2] = limpa_nome(linha[2])
+        co = coorientacao(linha[2])
         linha[0] = int(linha[0])
         linha[3] = int(linha[3])
         orientacao = limpa_ano(linha[2])
         linha.insert(3, orientacao[1])
         linha[2] = orientacao[0]
         linha[0] = i + len(pd.read_csv(arquivo)) - 1
+        linha.append(co)
         html = l.find("a", attrs={"itemtype": "http://schema.org/Person"})
         link = "https://plataforma-acacia.org" + html["href"]
         if not duplicado(link):
@@ -117,11 +127,12 @@ def criar_tabela(url: str, arquivo: str = "nodes.csv", id: int = 0, max_tries: i
     for link in links:
         criar_tabela(link[0], "nodes.csv", link[1])  # Recursão
 
+
 def porcentagem(arquivo: str = "nodes.csv") -> float:
     """Função que calcula a porcentagem de orientados"""
     plan = pd.read_csv(arquivo)
     return (len(plan) - 1) / int(plan["Ds"][0]) * 100
-   
+
 
 def adicionar_cache(link: str) -> None:
     """Função que adiciona o link no arquivo links.txt"""
@@ -163,6 +174,13 @@ def limpa_ano(str: str) -> tuple:
     return tipo, ano
 
 
+def coorientacao(tipo: str) -> bool:
+    if "Co" in tipo:
+        return True
+    else:
+        return False
+
+
 def define_edges(plan, id: int) -> None:
     """Função que define as arestas"""
     tabela = pd.DataFrame(columns=["Source", "Target"])
@@ -178,6 +196,16 @@ def limpa_arquivo(arquivo: str = "nodes.csv"):
     plan.drop(["IG", "Fc", "Ft", "G", "R", "Pr"], axis=1, inplace=True)
     plan.to_csv(arquivo, index=False)
 
+def polygon(arquivo: str = "nodes.csv"):
+    plan = pd.read_csv(arquivo)
+    poli = []
+    for i in plan["Co"]:
+        if i == True:
+            poli.append(3)
+        else:
+            poli.append(0)
+    plan["Polygon"] = poli
+    plan.to_csv(arquivo, index=False)
 
 def add_ano_ord(arquivo: str = "nodes.csv"):
     plan = pd.read_csv(arquivo)
@@ -205,6 +233,7 @@ def main() -> None:
     print(f"\nOrientador: {nome}")
     criar_tabela(url)
     limpa_arquivo()  # Limpa o arquivo para ficar apenas com os dados necessários
+    polygon()  # Adiciona a coluna Polygon
     add_ano_ord()  # Adiciona a coluna Ano_Ord
     nomear_arquivos(nome)  # Renomeia os arquivos
     print("\nOs dados foram baixados com sucesso!")
@@ -214,6 +243,8 @@ def main() -> None:
     print(f"{nome}_links.txt")
     print("\nObrigado por usar o JararacaScript!")
 
+
 tempo = time.time()
 main()
 print(f"\nTempo de execução: {time.time() - tempo:.2f} segundos")
+
