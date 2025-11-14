@@ -1,250 +1,161 @@
-from bs4 import BeautifulSoup as bs
-from os import replace
-from requests import get
 import pandas as pd
-import time
+from requests import get
+from bs4 import BeautifulSoup as bs
+from time import sleep, time
 
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
 }
 
 
-def dados_orientador(url: str) -> list:
-    """Função que retorna os dados do orientador"""
-    soup = bs(get(url, headers=headers).text, "html.parser")
-    tabela = soup.find("table", attrs={"id": "table-profile-ascendants"})
-    valores: list = [0, soup.find("h2", attrs={"itemprop": "name"}).text]
-    anos: str = ""
-    linhas = tabela.find_all("tr")
-    for l in linhas[1:]:
-        dado = l.find_all("td")
-        linha: list[str] = [tr.text for tr in dado]
-        linha[1] = limpa_nome(linha[1])
-        linha[2] = limpa_nome(linha[2])
-        anos += linha[2]
-    for i in limpa_ano(anos):
-        valores.append(i)
-    infos = soup.find_all("td", attrs={"class": "has-text-right"})
-    for info in infos[0:7]:
-        valores.append(int(info.text))
-    valores.append(False)
-    return valores
-
-
-def criar_arquivos(url: str) -> str:
-    """Função que cria o arquivo csv com os cabeçalhos"""
-    nodes = pd.DataFrame(
-        columns=["Id", "Nome", "Tipo", "Ano", "Ds", "IG", "Fc", "Ft", "G", "R", "Pr", "Co"]
+def get_ascendants_data(url):
+    global matrix
+    values = [
+        len(matrix),
+        bs(get(url, headers=headers).text, "html.parser")
+        .find("h2", attrs={"itemprop": "name"})
+        .text,
+    ]
+    tags = bs(get(url, headers=headers).text, "html.parser").find_all(
+        "div", attrs={"class": "tags has-addons"}
     )
-    dados = dados_orientador(url)
-    nome = dados[1]
-    nodes.loc[len(nodes)] = dados
-    nodes.to_csv("nodes.csv", index=False)
-    edges = pd.DataFrame(columns=["Source", "Target"])
-    edges.to_csv("edges.csv", index=False)
-    with open("links.txt", "w") as file:
-        file.write(url)
-    return nome
+    for tag in tags[1]:
+        if tag != "\n":
+            values.append(tag.text.strip().replace("\n", ""))
+    values.append(False)
+    table = (
+        bs(get(url, headers=headers).text, "html.parser")
+        .find("div", attrs={"class": "columns is-gapless"})
+        .find_all("div", attrs={"class": "column is-narrow"})
+    )
+    for div in table:
+        div_data = div.find_all("td", attrs={"class": "has-text-right"})
+        values += [data.text for data in div_data]
+        values[3] = int(values[3])
+    matrix.append(values)
 
 
-def nomear_arquivos(
-    nome: str,
-    nodes: str = "nodes.csv",
-    edges: str = "edges.csv",
-    links: str = "links.txt",
-) -> None:
-    """Função que renomeia os arquivos gerados"""
-    replace(nodes, f"{nome}_nodes.csv")
-    replace(edges, f"{nome}_edges.csv")
-    replace(links, f"{nome}_links.txt")
-
-
-def criar_tabela(
-    url: str, arquivo: str = "nodes.csv", id: int = 0, max_tries: int = 5
-) -> None:
-    """Função que cria uma tabela com os dados dos orientados de um professor"""
+def get_table_data(url: str) -> list:
+    """Fetch data from the table in the given URL."""
     current_try = 1
     timeout = 2
-
-    # Tenta acessar a página até o número máximo de tentativas
+    max_tries = 5
     while current_try <= max_tries:
         try:
-            soup = bs(get(url, headers=headers).text, "html.parser")
-            print(
-                f"\nBaixando dados de {soup.find("h2", attrs={"itemprop": "name"}).text}"
+            table = (
+                bs(get(url, headers=headers).text, "html.parser")
+                .find("table", attrs={"id": "table-profile-descendants"})
+                .find_all("tr")
             )
             break
         except AttributeError:
-            # Define o tempo de espera exponencialmente
             wait_time = timeout**current_try
-
             print(
                 f"Tentativa {current_try} falhou. Tentando novamente em {wait_time} segundos..."
             )
-
-            # Força o script a esperar antes de tentar novamente
-            time.sleep(wait_time)
-
-            # Incrementa o número da tentativa
+            sleep(wait_time)
             current_try += 1
+    return table
 
-    tabela = soup.find("table", attrs={"id": "table-profile-descendants"})
-    plan = pd.DataFrame(
-        columns=["Id", "Nome", "Tipo", "Ano", "Ds", "IG", "Fc", "Ft", "G", "R", "Pr", "Co"]
-    )
-    linhas = tabela.find_all("tr")  
+
+def get_descendants_data(url: str, id: int = 0):
+    """Fetch profile data from the given URL."""
+    global matrix
+    global cache
+    table_rows = get_table_data(url)
     links = []
-    txt = []
-    i = 1
-    for l in linhas[1:]:
-        dado = l.find_all("td")
-        linha = [tr.text for tr in dado]
-        linha[1] = limpa_nome(linha[1])
-        linha[2] = limpa_nome(linha[2])
-        co = coorientacao(linha[2])
-        linha[0] = int(linha[0])
-        linha[3] = int(linha[3])
-        orientacao = limpa_ano(linha[2])
-        linha.insert(3, orientacao[1])
-        linha[2] = orientacao[0]
-        linha[0] = i + len(pd.read_csv(arquivo)) - 1
-        linha.append(co)
-        html = l.find("a", attrs={"itemtype": "http://schema.org/Person"})
-        link = "https://plataforma-acacia.org" + html["href"]
-        if not duplicado(link):
-            plan.loc[len(plan)] = linha  # Adiciona a linha na tabela
-            i += 1
-            txt.append(link)
-            if linha[4] > 0 and not duplicado(
-                link
-            ):  # Verifica se o orientado tem orientados
-                links.append([link, int(linha[0])])
-    plan.to_csv(arquivo, mode="a", header=False, index=False)
-    print(f"O processo está {porcentagem():.2f}% completo")
-    define_edges(plan, id)  # Chama a função para definir as arestas
-    for link in txt:
-        adicionar_cache(link)
+    for row in table_rows[1:]:
+        link = (
+            "https://plataforma-acacia.org"
+            + row.find("a", attrs={"itemtype": "http://schema.org/Person"})["href"]
+        )
+        if link in cache:
+            continue
+        table_data = row.find_all("td")
+        data = [td.text.strip().replace("\n", "") for td in table_data]
+        data[0] = len(matrix)
+        orientation = choose_orientation(data[2])
+        data.pop(2)
+        data[2:2] = orientation
+        matrix.append(data)
+        edges.append((id, len(matrix) - 1))
+        cache.append(link)
+        if int(data[5]) > 0:
+            links.append((link, len(matrix) - 1))
     for link in links:
-        criar_tabela(link[0], "nodes.csv", link[1])  # Recursão
+        get_descendants_data(link[0], link[1])
 
 
-def porcentagem(arquivo: str = "nodes.csv") -> float:
-    """Função que calcula a porcentagem de orientados"""
-    plan = pd.read_csv(arquivo)
-    return (len(plan) - 1) / int(plan["Ds"][0]) * 100
+def get_columns_from_table(url: str) -> list:
+    """Extract column names from the table in the given URL."""
+    table_rows = get_table_data(url)
+    columns = [column.text.strip() for column in table_rows[0].find_all("th")]
+    columns[0] = "ID"
+    columns[2] = "Tipo"
+    columns.insert(3, "Ano")
+    columns.insert(4, "Coorientação")
+    return columns
 
 
-def adicionar_cache(link: str) -> None:
-    """Função que adiciona o link no arquivo links.txt"""
-    with open("links.txt", "a") as myfile:
-        myfile.write("\n" + link)
+def choose_orientation(
+    orientations: str,
+) -> list:
+    """Choose the first orientation or coorientation from the given string."""
+    orientations = orientations.replace(" ", "")
+    if len(orientations) == 5:
+        return [orientations[0], int(orientations[1:5]), False]
+    elif len(orientations) == 7:
+        return [orientations[0], int(orientations[1:5]), True]
+
+    def parse_orientation(str_orientations: str) -> list:
+        """Parse the orientation string into a list of orientations."""
+        list_of_orientations = []
+        for i in range(len(str_orientations)):
+            if str_orientations[i] in "MDP":
+                type = str_orientations[i]
+                year = str_orientations[i + 1 : i + 5]
+                orientation = [type, year, False]
+                list_of_orientations.append(orientation)
+            elif str_orientations[i] in "C":
+                orientation[2] = True
+        return list_of_orientations
+
+    choosed_orientation = None
+    orientations = parse_orientation(orientations)  # Esquisito
+    for orientation in orientations:
+        if not orientation[2]:
+            choosed_orientation = orientation
+            return choosed_orientation
+    if choosed_orientation is None:
+        return orientations[0]
 
 
-def duplicado(link: str) -> bool:
-    """Função que verifica se o link já existe no arquivo links.txt"""
-    with open("links.txt") as file:
-        lines = [line.rstrip() for line in file]
-    if link in lines:
-        return True
-    else:
-        return False
-
-
-def limpa_nome(nome: str) -> str:
-    """Função que limpa o nome dos orientados"""
-    nome = nome.replace("\n", "")
-    nome = nome.replace("  ", "")
-    return nome
-
-
-def limpa_ano(str: str) -> tuple:
-    """Função que limpa o ano dos orientados"""
-    if len(str) == 10:  # Tratamento para o caso de ter dois anos
-        ano1 = int(str[1:5])
-        ano2 = int(str[6:10])
-        if ano1 <= ano2:
-            ano = ano1
-            tipo = str[0]
-        else:
-            ano = ano2
-            tipo = str[5]
-    else:
-        ano = int(str[1:5])
-        tipo = str[0]
-    return tipo, ano
-
-
-def coorientacao(tipo: str) -> bool:
-    if "Co" in tipo:
-        return True
-    else:
-        return False
-
-
-def define_edges(plan, id: int) -> None:
-    """Função que define as arestas"""
-    tabela = pd.DataFrame(columns=["Source", "Target"])
-    final = len(pd.read_csv("edges.csv"))
-    for i in range(len(plan)):
-        tabela.loc[len(plan)] = [id, final + i + 1]
-        tabela.to_csv("edges.csv", mode="a", header=False, index=False)
-
-
-def limpa_arquivo(arquivo: str = "nodes.csv"):
-    """Função que limpa o arquivo para ficar apenas com os dados necessários"""
-    plan = pd.read_csv(arquivo)
-    plan.drop(["IG", "Fc", "Ft", "G", "R", "Pr"], axis=1, inplace=True)
-    plan.to_csv(arquivo, index=False)
-
-def polygon(arquivo: str = "nodes.csv"):
-    plan = pd.read_csv(arquivo)
-    poli = []
-    for i in plan["Co"]:
-        if i == True:
-            poli.append(3)
-        else:
-            poli.append(0)
-    plan["Polygon"] = poli
-    plan.to_csv(arquivo, index=False)
-
-def add_ano_ord(arquivo: str = "nodes.csv"):
-    plan = pd.read_csv(arquivo)
-    ano_i = int(plan["Ano"][0])
-    ano_ord = []
-    for ano in plan["Ano"]:
-        ano_ord.append(int(ano) - ano_i + 1)
-    plan["Ano_Ord"] = ano_ord
-    plan.to_csv(arquivo, index=False)
-
-
-def main() -> None:
-    print("\nBem-vindo ao JararacaScript!")
-    print(
+start_time = time()
+matrix = []
+edges = []
+cache = []
+print("\nBem-vindo ao JararacaScript!")
+print(
         "\nEste programa irá baixar os dados de orientação de um professor por meio da Plataforma Acácia"
     )
-    url = input("\nPor favor, insira a URL do professor que deseja baixar os dados: ")
-    # Exemplos de URL para teste
-    # url = "https://plataforma-acacia.org/profile/tereza-maria-de-azevedo-pires-serio/"
-    # url = "https://plataforma-acacia.org/profile/isaias-pessotti/"
-    # url = "https://plataforma-acacia.org/profile/silvia-tatiana-maurer-lane/"
-    # url = "https://plataforma-acacia.org/profile/carolina-martuscelli-bori/"
-    # url = "https://plataforma-acacia.org/profile/maria-do-carmo-guedes/"
-    nome = criar_arquivos(url)
-    print(f"\nOrientador: {nome}")
-    criar_tabela(url)
-    limpa_arquivo()  # Limpa o arquivo para ficar apenas com os dados necessários
-    polygon()  # Adiciona a coluna Polygon
-    add_ano_ord()  # Adiciona a coluna Ano_Ord
-    nomear_arquivos(nome)  # Renomeia os arquivos
-    print("\nOs dados foram baixados com sucesso!")
-    print("\nOs arquivos gerados foram:")
-    print(f"{nome}_nodes.csv")
-    print(f"{nome}_edges.csv")
-    print(f"{nome}_links.txt")
-    print("\nObrigado por usar o JararacaScript!")
+url = input("\nPor favor, insira a URL do professor que deseja baixar os dados: ")
+# Example URL:
+# url = "https://plataforma-acacia.org/profile/tereza-maria-de-azevedo-pires-serio/"
+get_ascendants_data(url)
+name = matrix[0][1]
+print(f"\nOrientador: {name}")
+get_descendants_data(url)
 
-
-tempo = time.time()
-main()
-print(f"\nTempo de execução: {time.time() - tempo:.2f} segundos")
-
+df_nodes = pd.DataFrame(matrix, columns=get_columns_from_table(url))
+df_nodes.drop(columns=["IG", "Fc", "Ft", "G", "R", "Pr"], axis=1, inplace=True) # Remove unnecessary columns
+df_nodes["Polygon"] = df_nodes["Coorientação"].apply(lambda x: 3 if x else 0)
+df_nodes["Ano_Ord"] = df_nodes["Ano"] - df_nodes["Ano"][0] + 1
+df_edges = pd.DataFrame(edges, columns=["Source", "Target"])
+print("\nOs dados foram baixados com sucesso!")
+df_nodes.to_csv(f"{name}_nodes.csv", index=False)
+df_edges.to_csv(f"{name}_edges.csv", index=False)
+print("\nOs arquivos gerados foram:")
+print(f"{name}_nodes.csv")
+print(f"{name}_edges.csv")
+print("\nObrigado por usar o JararacaScript!")
+print(f"\nTempo de execução: {time() - start_time:.2f} segundos")
