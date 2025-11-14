@@ -45,6 +45,9 @@ Para gerar a visualização em forma de grafo de Genealogia Acadêmica, é utilz
 
 	![image](https://github.com/user-attachments/assets/d05d9a1e-725e-45a4-a3af-79c3fa9d882e)
 
+	* Caso queira diferenciar orientações e coorientações, ative a opção **Enable polygon shaped node** em **Nodes** (É necessário ter o plugin _Polygon Shaped Nodes_ instalado)
+		* Orientações serão representadas por círculos
+  		* Coorientações serão represetandas por triangulos
 
 #### Observações
 * As configurações acima foram fornecidas por Rafael J. Pezzuto Damaceno, responsável pela Plataforma Acácia.
