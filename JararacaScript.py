@@ -31,7 +31,7 @@ def get_ascendants_data(url):
     for div in table:
         div_data = div.find_all("td", attrs={"class": "has-text-right"})
         values += [data.text for data in div_data]
-        values[3] = int(values[3])
+    values = [int(i) if type(i) == str and i.isdigit() else i for i in values]
     matrix.append(values)
 
 
@@ -77,10 +77,13 @@ def get_descendants_data(url: str, id: int = 0):
         orientation = choose_orientation(data[2])
         data.pop(2)
         data[2:2] = orientation
+        print(f"\nSalvando dados de: {data[1]}")
+        data = [int(i) if type (i) == str and i.isdigit() else i for i in data]
         matrix.append(data)
+        print(f"O processo está {progress():.2f}% completo")
         edges.append((id, len(matrix) - 1))
         cache.append(link)
-        if int(data[5]) > 0:
+        if data[5] > 0:
             links.append((link, len(matrix) - 1))
     for link in links:
         get_descendants_data(link[0], link[1])
@@ -103,9 +106,9 @@ def choose_orientation(
     """Choose the first orientation or coorientation from the given string."""
     orientations = orientations.replace(" ", "")
     if len(orientations) == 5:
-        return [orientations[0], int(orientations[1:5]), False]
+        return [orientations[0], orientations[1:5], False]
     elif len(orientations) == 7:
-        return [orientations[0], int(orientations[1:5]), True]
+        return [orientations[0], orientations[1:5], True]
 
     def parse_orientation(str_orientations: str) -> list:
         """Parse the orientation string into a list of orientations."""
@@ -121,7 +124,7 @@ def choose_orientation(
         return list_of_orientations
 
     choosed_orientation = None
-    orientations = parse_orientation(orientations)  # Esquisito
+    orientations = parse_orientation(orientations)
     for orientation in orientations:
         if not orientation[2]:
             choosed_orientation = orientation
@@ -129,6 +132,11 @@ def choose_orientation(
     if choosed_orientation is None:
         return orientations[0]
 
+def progress() -> float:
+    """Calculate the progress percentage based on the number of nodes."""
+    total_nodes = len(matrix)
+    total = matrix[0][5] + 1
+    return (total_nodes / total) * 100
 
 start_time = time()
 matrix = []
@@ -158,4 +166,5 @@ print("\nOs arquivos gerados foram:")
 print(f"{name}_nodes.csv")
 print(f"{name}_edges.csv")
 print("\nObrigado por usar o JararacaScript!")
+print("\nDesenvolvido por Guilherme Xavier Souza - github.com/guixavs")
 print(f"\nTempo de execução: {time() - start_time:.2f} segundos")
