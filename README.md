@@ -21,13 +21,13 @@ pip install pandas
 Para gerar a visualização em forma de grafo de Genealogia Acadêmica, é utilzado o software [Gephi 0.10](https://gephi.org/) com os seguintes plugins:
 * Ordered Graph Layout
 * Lineage
+* Polygon Shaped Nodes (opcional)
 
 ## Instruções
 1. Execute o arquivo _JararacaScript.py_ fornecendo o link do orientador desejado.
 
-2. Aguarde a execução do script e confira se na pasta do projeto foram gerados 3 novos arquivos:
+2. Aguarde a execução do script e confira se na pasta do projeto foram gerados 2 novos arquivos:
    * _NomeDoOrientador_edges.csv_
-   * _NomeDoOrientador_links.txt_
    * _NomeDoOrientador_nodes.csv_
 
 ### Gephi
